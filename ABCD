@@ -1,0 +1,95 @@
+using UnityEngine;
+using System.Collections;
+
+public class GameScriptController : MonoBehaviour
+{
+    [Header("References")]
+    public Transform player;
+    public Transform eggTargetPosition;
+    public Transform fishingSpot;
+    public Transform runningPathEnd;
+
+    [Header("Settings")]
+    public float moveSpeed = 5f;
+
+    // ฟังก์ชันหลักที่รันตามลำดับ 3 ข้อ
+    IEnumerator Start()
+    {
+        // -------------------------------------------------------------
+        // ข้อ 1: บินไปเก็บไข่ (ด้วยระบบวาร์ป + ลดความเร็วก่อนเข้าเป้าหมาย)
+        // -------------------------------------------------------------
+        yield return StartCoroutine(FlyAndTeleportToEgg());
+
+        // -------------------------------------------------------------
+        // ข้อ 2: ไปตกปลาที่ด่านสุดท้าย
+        // -------------------------------------------------------------
+        yield return StartCoroutine(GoToFishingStage());
+
+        // -------------------------------------------------------------
+        // ข้อ 3: วิ่งไป วิ่งรูวิ่ง (ลูปการวิ่งวนไปตามเส้นทาง)
+        // -------------------------------------------------------------
+        yield return StartCoroutine(RunLoopRoutine());
+    }
+
+    // --- รายละเอียดข้อ 1: วาร์ปไป + ลดความเร็วก่อนถึงไข่ ---
+    IEnumerator FlyAndTeleportToEgg()
+    {
+        Debug.Log("กำลังบิน/วาร์ปไปเก็บไข่...");
+
+        // จำลองการวาร์ปข้ามระยะทางไกลไปใกล้ๆ จุดไข่
+        Vector3 preTargetPosition = eggTargetPosition.position + new Vector3(0, 5, -5); 
+        player.position = preTargetPosition; // ทำการวาร์ป
+
+        // ขยับเข้าไปใกล้จุดเก็บไข่ พร้อมระบบลดความเร็ว (Ease-out)
+        float duration = 2.0f; // เวลาในการร่อนเข้า
+        float elapsedTime = 0f;
+        Vector3 startPos = player.position;
+
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            // ใช้ Mathf.SmoothStep เพื่อให้ช่วงท้ายความเร็วจะค่อยๆ ลดลงนิ่มนวล
+            float t = Mathf.SmoothStep(0f, 1f, elapsedTime / duration);
+            player.position = Vector3.Lerp(startPos, eggTargetPosition.position, t);
+            yield return null;
+        }
+
+        Debug.Log("เก็บไข่เรียบร้อย!");
+    }
+
+    // --- รายละเอียดข้อ 2: ตกปลาในด่านสุดท้าย ---
+    IEnumerator GoToFishingStage()
+    {
+        Debug.Log("กำลังเดินทางไปด่านสุดท้ายเพื่อตกปลา...");
+        
+        // ย้ายตัวละครไปจุดตกปลา
+        player.position = fishingSpot.position;
+
+        // จำลองเวลาตกปลา
+        yield return new WaitForSeconds(3.0f);
+        
+        Debug.Log("ตกปลาเสร็จสิ้น!");
+    }
+
+    // --- รายละเอียดข้อ 3: วิ่งไป วิ่งรูวิ่ง ---
+    IEnumerator RunLoopRoutine()
+    {
+        Debug.Log("เริ่มภารกิจวิ่งลูป (วิ่งรูวิ่ง)...");
+
+        while (true)
+        {
+            // วิ่งไปข้างหน้าตามทาง
+            float runTime = 0f;
+            while (runTime < 3.0f)
+            {
+                player.Translate(Vector3.forward * moveSpeed * Time.deltaTime);
+                runTime += Time.deltaTime;
+                yield return null;
+            }
+
+            // วิ่งกลับ หรือวนลูปตามแพทเทิร์นที่ต้องการ
+            player.Rotate(0, 180, 0); // กลับหลังหัน
+            yield return new WaitForSeconds(1.0f);
+        }
+    }
+}
